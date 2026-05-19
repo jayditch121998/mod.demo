@@ -3,7 +3,8 @@
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { ResultCard } from "@/components/ResultCard";
-import { UploadCloud, Link2, Sparkles } from "lucide-react";
+import { UploadCloud, Link2, Sparkles, Loader2 } from "lucide-react";
+import { ResultSkeleton } from "@/components/ResultSkeleton";
 import type { ModerationResult } from "@/types/moderation";
 
 const EXAMPLE_URLS = [
@@ -32,7 +33,13 @@ export function ImageModerationPanel({ provider }: Props) {
   const [activeTab, setActiveTab] = useState<"url" | "upload">("url");
   const fileRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => { setResults([]); setPreviewSrc(null); }, [provider]);
+  const supportsUpload = provider !== "operatorplatform";
+
+  useEffect(() => {
+    setResults([]);
+    setPreviewSrc(null);
+    if (provider === "operatorplatform") setActiveTab("url");
+  }, [provider]);
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -83,16 +90,20 @@ export function ImageModerationPanel({ provider }: Props) {
         {/* URL / Upload switcher */}
         <div className="flex gap-1 p-1 bg-zinc-100 rounded-lg w-fit">
           {([
-            { id: "url", label: "Image URL", icon: Link2 },
-            { id: "upload", label: "Upload File", icon: UploadCloud },
+            { id: "url", label: "Image URL", icon: Link2, enabled: true },
+            { id: "upload", label: "Upload File", icon: UploadCloud, enabled: supportsUpload },
           ] as const).map((t) => (
             <button
               key={t.id}
-              onClick={() => setActiveTab(t.id)}
+              disabled={!t.enabled}
+              onClick={() => t.enabled && setActiveTab(t.id)}
+              title={!t.enabled ? "OperatorPlatform requires a public URL — file upload is not supported" : undefined}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
-                activeTab === t.id
+                activeTab === t.id && t.enabled
                   ? "bg-white text-zinc-900 shadow-sm"
-                  : "text-zinc-500 hover:text-zinc-700"
+                  : t.enabled
+                  ? "text-zinc-500 hover:text-zinc-700"
+                  : "text-zinc-300 cursor-not-allowed"
               }`}
             >
               <t.icon className="w-3.5 h-3.5" />
@@ -100,6 +111,12 @@ export function ImageModerationPanel({ provider }: Props) {
             </button>
           ))}
         </div>
+
+        {!supportsUpload && (
+          <p className="text-xs text-zinc-400 bg-zinc-100 px-3 py-2 rounded-lg">
+            OperatorPlatform requires a publicly accessible URL — file upload is not supported.
+          </p>
+        )}
 
         {activeTab === "url" && (
           <div className="space-y-3">
@@ -175,16 +192,20 @@ export function ImageModerationPanel({ provider }: Props) {
         <Button
           onClick={handleSubmit}
           disabled={!canSubmit}
-          className="w-full gap-1.5 bg-zinc-900 hover:bg-zinc-700 text-white"
+          className="w-full gap-1.5 bg-zinc-900 hover:bg-zinc-700 text-white disabled:opacity-60 disabled:cursor-not-allowed"
         >
-          <Sparkles className="w-3.5 h-3.5" />
-          {loading ? "Analyzing..." : "Run Moderation"}
+          {loading
+            ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Analyzing...</>
+            : <><Sparkles className="w-3.5 h-3.5" /> Run Moderation</>
+          }
         </Button>
       </div>
 
       {/* Right — results */}
       <div className="space-y-4">
-        {results.length === 0 ? (
+        {loading ? (
+          <ResultSkeleton />
+        ) : results.length === 0 ? (
           <div className="flex items-center justify-center h-48 rounded-xl border border-dashed border-zinc-200 text-zinc-300 text-sm">
             Results will appear here
           </div>

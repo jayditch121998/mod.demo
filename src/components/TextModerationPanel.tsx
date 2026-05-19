@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { ResultCard } from "@/components/ResultCard";
-import { Sparkles } from "lucide-react";
+import { Sparkles, Loader2 } from "lucide-react";
+import { ResultSkeleton } from "@/components/ResultSkeleton";
 import type { ModerationResult } from "@/types/moderation";
 
 const EXAMPLES = [
@@ -72,10 +73,12 @@ export function TextModerationPanel({ provider }: Props) {
               onClick={handleSubmit}
               disabled={loading || !text.trim()}
               size="sm"
-              className="gap-1.5 bg-zinc-900 hover:bg-zinc-700 text-white"
+              className="gap-1.5 bg-zinc-900 hover:bg-zinc-700 text-white disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              <Sparkles className="w-3.5 h-3.5" />
-              {loading ? "Analyzing..." : "Run Moderation"}
+              {loading
+                ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Analyzing...</>
+                : <><Sparkles className="w-3.5 h-3.5" /> Run Moderation</>
+              }
             </Button>
           </div>
         </div>
@@ -83,7 +86,9 @@ export function TextModerationPanel({ provider }: Props) {
 
       {/* Right — results */}
       <div className="space-y-4">
-        {results.length === 0 ? (
+        {loading ? (
+          <ResultSkeleton />
+        ) : results.length === 0 ? (
           <div className="flex items-center justify-center h-48 rounded-xl border border-dashed border-zinc-200 text-zinc-300 text-sm">
             Results will appear here
           </div>
