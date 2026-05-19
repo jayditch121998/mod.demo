@@ -76,7 +76,7 @@ export function ModerationApp() {
         </div>
 
         {/* Content */}
-        <main className="flex-1 px-8 py-8 max-w-2xl">
+        <main className="flex-1 px-8 py-8">
           {tab === "text" && <TextModerationPanel provider={provider} />}
           {tab === "image" && <ImageModerationPanel provider={provider} />}
         </main>
