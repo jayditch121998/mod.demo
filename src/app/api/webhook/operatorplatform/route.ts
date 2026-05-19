@@ -1,42 +1,49 @@
 import { NextRequest, NextResponse } from "next/server";
 import { setWebhookResult } from "@/lib/webhookStore";
 
+export interface OperatorPlatformWebhookPayload {
+  username?: string;
+  service_code?: string;
+  content?: {
+    type?: string;
+    url?: string;
+    mod_content_id?: number;
+    notes?: string;
+    result?: string; // stringified JSON
+  };
+  additional?: Record<string, unknown>;
+}
+
 // OperatorPlatform calls this URL when a moderator completes their review.
-// Configure this URL in your OperatorPlatform dashboard:
+// Set this in your OperatorPlatform dashboard:
 //   https://<your-domain>/api/webhook/operatorplatform
 export async function POST(req: NextRequest) {
   try {
-    const payload = await req.json();
-    const contentId = payload?.content_id ?? payload?.transaction?.content_id;
+    const payload = await req.json() as OperatorPlatformWebhookPayload;
 
+    const contentId = payload?.content?.mod_content_id;
     if (!contentId) {
-      return NextResponse.json({ error: "Missing content_id in payload" }, { status: 400 });
+      return NextResponse.json({ error: "Missing content.mod_content_id in payload" }, { status: 400 });
     }
 
-    setWebhookResult(contentId, payload);
+    // Parse the stringified result object
+    let parsedResult: Record<string, number> | null = null;
+    if (typeof payload.content?.result === "string") {
+      try {
+        parsedResult = JSON.parse(payload.content.result);
+      } catch {
+        // leave null if unparseable
+      }
+    }
+
+    setWebhookResult(contentId, { ...payload, _parsedResult: parsedResult });
     return NextResponse.json({ received: true, content_id: contentId });
   } catch {
-    // Some platforms send form-encoded webhooks
-    try {
-      const text = await req.text();
-      const params = new URLSearchParams(text);
-      const dataStr = params.get("data");
-      if (dataStr) {
-        const payload = JSON.parse(dataStr);
-        const contentId = payload?.content_id ?? payload?.transaction?.content_id;
-        if (contentId) {
-          setWebhookResult(contentId, payload);
-          return NextResponse.json({ received: true, content_id: contentId });
-        }
-      }
-    } catch {
-      // ignore
-    }
     return NextResponse.json({ error: "Invalid webhook payload" }, { status: 400 });
   }
 }
 
-// Allow GET for easy webhook URL verification (some platforms ping it)
+// Allow GET for webhook URL verification
 export async function GET() {
   return NextResponse.json({ status: "ok", endpoint: "operatorplatform-webhook" });
 }

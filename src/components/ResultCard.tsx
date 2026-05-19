@@ -168,20 +168,95 @@ function PendingState({ contentId }: { contentId?: number | string }) {
   );
 }
 
+interface StoredWebhookPayload {
+  _parsedResult?: Record<string, number>;
+  content?: { mod_content_id?: number; url?: string };
+  [key: string]: unknown;
+}
+
+function normalizeWebhookCategories(result: Record<string, number>) {
+  // Sort: harmful categories first, then safe
+  const order = ["safe", "approved"];
+  return Object.entries(result)
+    .map(([name, score]) => ({
+      name,
+      score,
+      flagged: name !== "safe" && name !== "approved" && score > 0,
+    }))
+    .sort((a, b) => {
+      const aIsSafe = order.includes(a.name);
+      const bIsSafe = order.includes(b.name);
+      if (aIsSafe !== bIsSafe) return aIsSafe ? 1 : -1;
+      return b.score - a.score;
+    });
+}
+
 function WebhookResult({ payload }: { payload: unknown }) {
   const [expanded, setExpanded] = useState(false);
+
+  const stored = payload as StoredWebhookPayload;
+  const parsedResult = stored?._parsedResult;
+  const categories = parsedResult ? normalizeWebhookCategories(parsedResult) : null;
+  const isSafe = parsedResult ? (parsedResult.safe === 1 || parsedResult.approved === 1) : null;
+  const isFlagged = parsedResult
+    ? Object.entries(parsedResult).some(([k, v]) => k !== "safe" && k !== "approved" && v > 0)
+    : false;
+
   return (
-    <div className="space-y-2">
-      <div className="flex items-center gap-2 text-xs font-medium text-zinc-500">
+    <div className="space-y-3">
+      {/* Verdict banner */}
+      <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium ${
+        isSafe && !isFlagged
+          ? "bg-emerald-50 text-emerald-700"
+          : isFlagged
+          ? "bg-red-50 text-red-700"
+          : "bg-zinc-50 text-zinc-500"
+      }`}>
         <Webhook className="w-3.5 h-3.5" />
-        Webhook received
+        Moderator decision received
+        {isSafe !== null && (
+          <span className="ml-auto text-xs font-semibold">
+            {isFlagged ? "Flagged" : "Approved"}
+          </span>
+        )}
       </div>
+
+      {/* Category bars */}
+      {categories && (
+        <div className="space-y-2">
+          {categories.map((cat) => (
+            <div key={cat.name} className="flex items-center gap-3">
+              <div className="w-20 shrink-0 flex items-center gap-1">
+                {cat.flagged && <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0" />}
+                <span className={`text-xs font-mono truncate ${cat.flagged ? "text-zinc-700 font-semibold" : "text-zinc-400"}`}>
+                  {cat.name}
+                </span>
+              </div>
+              <div className="flex-1 bg-zinc-200 rounded-full h-1.5 overflow-hidden">
+                <div
+                  className={`h-full rounded-full ${
+                    cat.flagged ? "bg-red-500" : cat.name === "safe" ? "bg-emerald-400" : "bg-zinc-300"
+                  }`}
+                  style={{ width: `${cat.score * 100}%` }}
+                />
+              </div>
+              <span className={`w-8 text-right text-xs font-mono font-medium ${
+                cat.flagged ? "text-red-500" : cat.name === "safe" ? "text-emerald-600" : "text-zinc-400"
+              }`}>
+                {cat.score}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Raw payload toggle */}
       <button
         onClick={() => setExpanded(!expanded)}
         className="flex items-center gap-1 text-xs text-zinc-400 hover:text-zinc-700 transition-colors"
       >
         {expanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-        view payload
+        raw webhook payload
       </button>
       {expanded && (
         <pre className="text-xs bg-zinc-900 text-emerald-400 p-4 rounded-lg overflow-auto max-h-72 font-mono whitespace-pre-wrap break-all">
