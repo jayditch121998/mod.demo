@@ -16,6 +16,7 @@ export function ModerationApp() {
     if (activeProvider && !activeProvider.supportsText && tab === "text") {
       setTab("image");
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeProvider, tab]);
 
   const tabs = [

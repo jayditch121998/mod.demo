@@ -1,6 +1,7 @@
 "use client";
 
-import { ShieldCheck, ImageIcon, AlignLeft } from "lucide-react";
+import Link from "next/link";
+import { ShieldCheck, ImageIcon, AlignLeft, Radio } from "lucide-react";
 
 export interface NavProvider {
   id: string;
@@ -101,8 +102,15 @@ export function ProviderNav({ selected, onSelect }: Props) {
       </div>
 
       {/* Footer */}
-      <div className="px-5 py-4 border-t border-zinc-800">
-        <p className="text-[10px] text-zinc-600">Content Moderation Playground</p>
+      <div className="px-3 py-4 border-t border-zinc-800 space-y-1">
+        <Link
+          href="/listener"
+          className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-zinc-400 hover:bg-zinc-800/60 hover:text-zinc-200 transition-colors text-sm"
+        >
+          <Radio className="w-3.5 h-3.5" />
+          <span className="font-medium">Webhook Listener</span>
+        </Link>
+        <p className="text-[10px] text-zinc-700 px-3">Content Moderation Playground</p>
       </div>
     </aside>
   );
