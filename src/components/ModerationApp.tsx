@@ -1,14 +1,21 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { ProviderNav, PROVIDERS } from "@/components/ProviderNav";
 import { TextModerationPanel } from "@/components/TextModerationPanel";
 import { ImageModerationPanel } from "@/components/ImageModerationPanel";
-import { AlignLeft, ImageIcon } from "lucide-react";
+import { AlignLeft, ImageIcon, LogOut } from "lucide-react";
 
 export function ModerationApp() {
+  const router = useRouter();
   const [provider, setProvider] = useState("openai");
   const [tab, setTab] = useState<"text" | "image">("text");
+
+  async function handleLogout() {
+    await fetch("/api/auth/logout", { method: "POST" });
+    router.push("/login");
+  }
 
   const activeProvider = PROVIDERS.find((p) => p.id === provider);
 
@@ -42,12 +49,21 @@ export function ModerationApp() {
               Test content moderation on text and images
             </p>
           </div>
-          <div className={`text-xs px-2.5 py-1 rounded-full font-medium ${
-            activeProvider?.available
-              ? "bg-emerald-50 text-emerald-600"
-              : "bg-zinc-100 text-zinc-400"
-          }`}>
-            {activeProvider?.available ? "● Active" : "○ Unavailable"}
+          <div className="flex items-center gap-3">
+            <div className={`text-xs px-2.5 py-1 rounded-full font-medium ${
+              activeProvider?.available
+                ? "bg-emerald-50 text-emerald-600"
+                : "bg-zinc-100 text-zinc-400"
+            }`}>
+              {activeProvider?.available ? "● Active" : "○ Unavailable"}
+            </div>
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-zinc-700 px-2.5 py-1.5 rounded-lg hover:bg-zinc-100 transition-colors"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              Logout
+            </button>
           </div>
         </header>
 
